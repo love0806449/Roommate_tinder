@@ -1,111 +1,48 @@
 package com.example.swipecard;
 
 import android.os.Bundle;
-import android.util.Log;
-import android.widget.ArrayAdapter;
-import android.widget.Toast;
-
-import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
-
-import com.lorentzos.flingswipe.SwipeFlingAdapterView;
+import com.yuyakaido.android.cardstackview.CardStackLayoutManager;
+import com.yuyakaido.android.cardstackview.CardStackView;
+import com.yuyakaido.android.cardstackview.Direction;
+import com.yuyakaido.android.cardstackview.StackFrom;
 
 import java.util.ArrayList;
+import java.util.List;
+
 
 public class MainActivity extends AppCompatActivity {
-
-    private ArrayList<String> al;
-    private ArrayAdapter<String> arrayAdapter;
-    private int i;
-
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        CardStackView cardStackView = findViewById(R.id.card_stack_view);
 
-        al = new ArrayList<>();
-        al.add("哲維");
-        al.add("珩安");
-        al.add("B1243005");
-        al.add("B1243001");
-        al.add("黃朝曦老師");
-        al.add("我愛你");
-        al.add("你愛我");
-        al.add("我想拉屎");
-        al.add("哲維");
-        al.add("珩安");
-        al.add("B1243005");
-        al.add("B1243001");
-        al.add("黃朝曦老師");
-        al.add("我愛你");
-        al.add("你愛我");
-        al.add("我想拉屎");
-        al.add("哲維");
-        al.add("珩安");
-        al.add("B1243005");
-        al.add("B1243001");
-        al.add("黃朝曦老師");
-        al.add("我愛你");
-        al.add("你愛我");
-        al.add("我想拉屎");
+        List<Spot> spots = new ArrayList<>();
+        spots.add(new Spot("東京鐵塔", "東京", "https://kmweb.moa.gov.tw/files/IMITA_Gallery/13/b1a898ccbb_m.jpg"));
+        spots.add(new Spot("晴空塔", "東京", "https://c.files.bbci.co.uk/03F9/production/_93871010_96d3c9bd-2068-4643-bc4f-81c1ad795343.jpg"));
+        spots.add(new Spot("淺草寺", "東京", "https://en.pimg.jp/115/846/989/1/115846989.jpg"));
+// 或用本地資源（R.drawable.xxx）
+        spots.add(new Spot("台場", "東京", "android.resource://" + getPackageName() + "/" + R.drawable.nigga));
 
-        arrayAdapter = new ArrayAdapter<>(this, R.layout.item, R.id.helloText, al );
+        CardStackAdapter adapter = new CardStackAdapter(spots);
+        cardStackView.setAdapter(adapter);
 
-        SwipeFlingAdapterView flingContainer = (SwipeFlingAdapterView) findViewById(R.id.frame);
-
-        flingContainer.setAdapter(arrayAdapter);
-        flingContainer.setFlingListener(new SwipeFlingAdapterView.onFlingListener() {
-            @Override
-            public void removeFirstObjectInAdapter() {
-                // this is the simplest way to delete an object from the Adapter (/AdapterView)
-                Log.d("LIST", "removed object!");
-                al.remove(0);
-                arrayAdapter.notifyDataSetChanged();
-            }
-
-            @Override
-            public void onLeftCardExit(Object dataObject) {
-                //Do something on the left!
-                //You also have access to the original object.
-                //If you want to use it just cast it (String) dataObject
-                Toast.makeText(MainActivity.this,"left",Toast.LENGTH_SHORT).show();
-            }
-
-            @Override
-            public void onRightCardExit(Object dataObject) {
-                Toast.makeText(MainActivity.this,"right",Toast.LENGTH_SHORT).show();
-            }
-
-            @Override
-            public void onAdapterAboutToEmpty(int itemsInAdapter) {
-                // Ask for more data here
-                al.add("XML ".concat(String.valueOf(i)));
-                arrayAdapter.notifyDataSetChanged();
-                Log.d("LIST", "notified");
-                i++;
-            }
-
-            @Override
-            public void onScroll(float scrollProgressPercent) {
-
-            }
-        });
-
-
-        // Optionally add an OnItemClickListener
-        flingContainer.setOnItemClickListener(new SwipeFlingAdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClicked(int itemPosition, Object dataObject) {
-                Toast.makeText(MainActivity.this,"click",Toast.LENGTH_SHORT).show();
-            }
-        });
-
+        // 設定 CardStackView 的 LayoutManager
+        CardStackLayoutManager manager = new CardStackLayoutManager(this);
+        cardStackView.setLayoutManager(manager);
+// 設定卡片堆疊行為
+        manager.setStackFrom(StackFrom.Top);         // 堆疊方向（Top/Bottom/Left/Right）
+        manager.setVisibleCount(3);                 // 可見卡片數量
+        manager.setTranslationInterval(12.0f);      // 卡片間距
+        manager.setScaleInterval(0.95f);            // 卡片縮放比例
+        manager.setSwipeThreshold(0.3f);            // 滑動閾值（0.1~1.0）
+        manager.setMaxDegree(20.0f);                // 卡片最大旋轉角度
+        manager.setDirections(Direction.HORIZONTAL); // 允許滑動方向（水平/垂直）
+        manager.setCanScrollHorizontal(true);       // 允許水平滑動
+        manager.setCanScrollVertical(true);         // 允許垂直滑動
     }
 
 }
