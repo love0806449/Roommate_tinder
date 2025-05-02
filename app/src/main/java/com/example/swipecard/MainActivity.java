@@ -25,7 +25,7 @@ public class MainActivity extends AppCompatActivity {
         spots.add(new Spot("晴空塔", "東京", "https://c.files.bbci.co.uk/03F9/production/_93871010_96d3c9bd-2068-4643-bc4f-81c1ad795343.jpg"));
         spots.add(new Spot("淺草寺", "東京", "https://en.pimg.jp/115/846/989/1/115846989.jpg"));
 // 或用本地資源（R.drawable.xxx）
-        spots.add(new Spot("台場", "東京", "android.resource://" + getPackageName() + "/" + R.drawable.nigga));
+        spots.add(new Spot("曹哲維", "大猛男", "android.resource://" + getPackageName() + "/" + R.drawable.nigga));
 
         CardStackAdapter adapter = new CardStackAdapter(spots);
         cardStackView.setAdapter(adapter);
