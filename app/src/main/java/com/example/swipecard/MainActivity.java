@@ -20,6 +20,8 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements CardStackListener{
 
+    private List<Spot> spots;
+    private CardStackAdapter adapter;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -67,6 +69,7 @@ public class MainActivity extends AppCompatActivity implements CardStackListener
             Log.d("SwipeDirection", "Right");
             // 在这里处理右滑逻辑
         }
+
     }
 
     @Override
