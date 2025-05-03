@@ -1,8 +1,15 @@
 package com.example.swipecard;
 
 import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+import android.widget.Toast;
+
+
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import com.yuyakaido.android.cardstackview.CardStackLayoutManager;
+import com.yuyakaido.android.cardstackview.CardStackListener;
 import com.yuyakaido.android.cardstackview.CardStackView;
 import com.yuyakaido.android.cardstackview.Direction;
 import com.yuyakaido.android.cardstackview.StackFrom;
@@ -11,7 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements CardStackListener{
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -19,6 +26,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         CardStackView cardStackView = findViewById(R.id.card_stack_view);
+
 
         List<Spot> spots = new ArrayList<>();
         spots.add(new Spot("東京鐵塔", "東京", "https://kmweb.moa.gov.tw/files/IMITA_Gallery/13/b1a898ccbb_m.jpg"));
@@ -31,18 +39,53 @@ public class MainActivity extends AppCompatActivity {
         cardStackView.setAdapter(adapter);
 
         // 設定 CardStackView 的 LayoutManager
-        CardStackLayoutManager manager = new CardStackLayoutManager(this);
+        CardStackLayoutManager manager = new CardStackLayoutManager(this, this); // 第二個參數是 Listener
         cardStackView.setLayoutManager(manager);
+
 // 設定卡片堆疊行為
-        manager.setStackFrom(StackFrom.Top);         // 堆疊方向（Top/Bottom/Left/Right）
-        manager.setVisibleCount(3);                 // 可見卡片數量
-        manager.setTranslationInterval(12.0f);      // 卡片間距
-        manager.setScaleInterval(0.95f);            // 卡片縮放比例
-        manager.setSwipeThreshold(0.3f);            // 滑動閾值（0.1~1.0）
-        manager.setMaxDegree(20.0f);                // 卡片最大旋轉角度
-        manager.setDirections(Direction.HORIZONTAL); // 允許滑動方向（水平/垂直）
-        manager.setCanScrollHorizontal(true);       // 允許水平滑動
-        manager.setCanScrollVertical(true);         // 允許垂直滑動
+        manager.setStackFrom(StackFrom.Top);
+        manager.setVisibleCount(3);
+        manager.setDirections(Direction.HORIZONTAL); // 只允許左右滑動
+
+
+
+    }
+    @Override
+    public void onCardDragging(@NonNull Direction direction, float ratio) {
+        // 卡片正在拖动时调用
     }
 
+    @Override
+    public void onCardSwiped(@NonNull Direction direction) {
+        // 卡片滑动完成时调用
+        if (direction == Direction.Left) {
+            Toast.makeText(this, "向左滑动了", Toast.LENGTH_SHORT).show();
+            Log.d("SwipeDirection", "Left");
+            // 在这里处理左滑逻辑
+        } else if (direction == Direction.Right) {
+            Toast.makeText(this, "向右滑动了", Toast.LENGTH_SHORT).show();
+            Log.d("SwipeDirection", "Right");
+            // 在这里处理右滑逻辑
+        }
+    }
+
+    @Override
+    public void onCardRewound() {
+        // 卡片回弹时调用
+    }
+
+    @Override
+    public void onCardCanceled() {
+        // 滑动取消时调用
+    }
+
+    @Override
+    public void onCardAppeared(View view, int position) {
+        // 卡片出现时调用
+    }
+
+    @Override
+    public void onCardDisappeared(View view, int position) {
+        // 卡片消失时调用
+    }
 }
