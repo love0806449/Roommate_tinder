@@ -1,0 +1,210 @@
+package com.example.swipecard;
+
+import android.Manifest;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.provider.MediaStore;
+import android.text.TextUtils;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.squareup.picasso.Picasso;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+public class ProfileSetupActivity extends AppCompatActivity {
+
+    private static final int PICK_IMAGE_REQUEST = 1;
+    private static final int STORAGE_PERMISSION_CODE = 100;
+
+    private ImageView profileImageView;
+    private EditText nameEditText;
+    private EditText bioEditText;
+    private Button saveButton;
+
+    private Uri imageUri;
+    private FirebaseAuth auth;
+    private FirebaseFirestore db;
+    private StorageReference storageRef;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_profile_setup);
+
+        // 初始化 Firebase
+        auth = FirebaseAuth.getInstance();
+        if (auth.getCurrentUser() == null) {
+            finish();
+            return;
+        }
+
+        db = FirebaseFirestore.getInstance();
+        storageRef = FirebaseStorage.getInstance().getReference("profile_images");
+
+        // 初始化視圖
+        profileImageView = findViewById(R.id.profile_image_view);
+        nameEditText = findViewById(R.id.name_edit_text);
+        bioEditText = findViewById(R.id.bio_edit_text);
+        saveButton = findViewById(R.id.save_button);
+
+        // 設置點擊事件
+        profileImageView.setOnClickListener(v -> checkPermissionsAndOpenImageChooser());
+        saveButton.setOnClickListener(v -> saveProfile());
+    }
+
+    private void checkPermissionsAndOpenImageChooser() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // Android 13+ 使用 READ_MEDIA_IMAGES
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES)
+                    == PackageManager.PERMISSION_GRANTED) {
+                openImageChooser();
+            } else {
+                requestStoragePermission(Manifest.permission.READ_MEDIA_IMAGES);
+            }
+        } else {
+            // 舊版本使用 READ_EXTERNAL_STORAGE
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+                    == PackageManager.PERMISSION_GRANTED) {
+                openImageChooser();
+            } else {
+                requestStoragePermission(Manifest.permission.READ_EXTERNAL_STORAGE);
+            }
+        }
+    }
+
+    private void requestStoragePermission(String permission) {
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this, permission)) {
+            new AlertDialog.Builder(this)
+                    .setTitle("需要權限")
+                    .setMessage("需要存取您的相冊以選擇個人照片")
+                    .setPositiveButton("確定", (dialog, which) ->
+                            ActivityCompat.requestPermissions(this,
+                                    new String[]{permission},
+                                    STORAGE_PERMISSION_CODE))
+                    .setNegativeButton("取消", null)
+                    .show();
+        } else {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{permission},
+                    STORAGE_PERMISSION_CODE);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == STORAGE_PERMISSION_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                openImageChooser();
+            } else {
+                Toast.makeText(this, "需要權限才能選擇照片", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private void openImageChooser() {
+        Intent intent = new Intent(Intent.ACTION_PICK,
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        startActivityForResult(intent, PICK_IMAGE_REQUEST);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK && data != null) {
+            imageUri = data.getData();
+            try {
+                Picasso.get()
+                        .load(imageUri)
+                        .placeholder(R.drawable.nigga)
+                        .error(R.drawable.error)
+                        .fit()
+                        .centerCrop()
+                        .into(profileImageView);
+            } catch (Exception e) {
+                Toast.makeText(this, "圖片加載失敗", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private void saveProfile() {
+        String name = nameEditText.getText().toString().trim();
+        String bio = bioEditText.getText().toString().trim();
+
+        if (TextUtils.isEmpty(name)) {
+            Toast.makeText(this, "請輸入姓名", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (imageUri == null) {
+            Toast.makeText(this, "請選擇個人照片", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        saveButton.setEnabled(false);
+
+        // 上傳圖片到 Firebase Storage
+        String imageName = UUID.randomUUID().toString();
+        StorageReference imageRef = storageRef.child(imageName);
+
+        imageRef.putFile(imageUri)
+                .continueWithTask(task -> {
+                    if (!task.isSuccessful()) {
+                        throw task.getException();
+                    }
+                    return imageRef.getDownloadUrl();
+                })
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        Uri downloadUri = task.getResult();
+                        saveUserData(name, bio, downloadUri.toString());
+                    } else {
+                        Toast.makeText(this, "圖片上傳失敗", Toast.LENGTH_SHORT).show();
+                        saveButton.setEnabled(true);
+                    }
+                });
+    }
+
+    private void saveUserData(String name, String bio, String imageUrl) {
+        String userId = auth.getCurrentUser().getUid();
+
+        Map<String, Object> user = new HashMap<>();
+        user.put("userId", userId);
+        user.put("name", name);
+        user.put("bio", bio);
+        user.put("profileImageUrl", imageUrl);
+
+        db.collection("users").document(userId)
+                .set(user)
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "個人資料已保存", Toast.LENGTH_SHORT).show();
+                    startActivity(new Intent(this, MainActivity.class));
+                    finish();
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(this, "保存失敗: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    saveButton.setEnabled(true);
+                });
+    }
+}

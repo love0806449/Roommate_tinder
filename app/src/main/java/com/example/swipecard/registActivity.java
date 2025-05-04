@@ -62,7 +62,7 @@ public class registActivity extends AppCompatActivity {
                 auth.createUserWithEmailAndPassword(regemail,regpsw).addOnCompleteListener(new OnCompleteListener<AuthResult>() {
                     @Override
                     public void onComplete(@NonNull Task<AuthResult> task) {
-                        if (task.isComplete()){
+                        if (task.isSuccessful()){
                             Toast.makeText(registActivity.this,"註冊成功",Toast.LENGTH_LONG).show();
                             Intent intent = new Intent(registActivity.this, loginActivity.class);
                             startActivity(intent);

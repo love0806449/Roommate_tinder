@@ -43,7 +43,7 @@
         app:layout_constraintVertical_bias="0.314" />
 
     <TextView
-        android:id="@+id/item_city"
+        android:id="@+id/item_bio"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:textAppearance="@style/TextAppearance.AppCompat.Large"

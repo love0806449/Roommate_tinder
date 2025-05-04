@@ -13,11 +13,11 @@ import java.util.List;
 
 public class CardStackAdapter extends CardStackView.Adapter<CardStackAdapter.ViewHolder> {
 
-    private List<Spot> spots; // 新增：數據列表
+    private List<User> users; // 新增：數據列表
 
     // 新增：構造方法，傳入數據
-    public CardStackAdapter(List<Spot> spots) {
-        this.spots = spots;
+    public CardStackAdapter(List<User> users) {
+        this.users = users;
     }
 
     @NonNull
@@ -29,33 +29,32 @@ public class CardStackAdapter extends CardStackView.Adapter<CardStackAdapter.Vie
     }
 
     @Override
-    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        Spot spot = spots.get(position);
-        holder.name.setText(spot.getName());
-        holder.city.setText(spot.getCity());
+    // 在 onBindViewHolder 中：
+    public void onBindViewHolder(ViewHolder holder, int position) {
 
-        // 使用 Glide 載入圖片
-        Glide.with(holder.itemView.getContext())
-                .load(spot.getImageUrl())
-                .placeholder(R.drawable.placeholder)
-                .error(R.drawable.error)
+        User user = users.get(position);
+        holder.name.setText(user.getName());
+        holder.bio.setText(user.getBio()); // 新增的自我介紹
+
+        Glide.with(holder.itemView)
+                .load(user.getImageUrl())
                 .into(holder.image);
     }
 
     // 新增：必須實現的方法，返回數據數量
     @Override
     public int getItemCount() {
-        return spots.size();
+        return users.size();
     }
 
     public static class ViewHolder extends CardStackView.ViewHolder {
-        TextView name, city;
+        TextView name, bio;
         ImageView image;
 
         public ViewHolder(View view) {
             super(view);
             name = view.findViewById(R.id.item_name);
-            city = view.findViewById(R.id.item_city);
+            bio = view.findViewById(R.id.item_bio);
             image = view.findViewById(R.id.item_image);
         }
     }
