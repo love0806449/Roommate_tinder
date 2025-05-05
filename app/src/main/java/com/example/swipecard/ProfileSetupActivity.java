@@ -197,7 +197,6 @@ public class ProfileSetupActivity extends AppCompatActivity {
         StorageMetadata metadata = new StorageMetadata.Builder()
                 .setContentType("image/jpeg")
                 .build();
-12
         UploadTask uploadTask = imageRef.putFile(imageUri, metadata);
 
         uploadTask.addOnProgressListener(taskSnapshot -> {
