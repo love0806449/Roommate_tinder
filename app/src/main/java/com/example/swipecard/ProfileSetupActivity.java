@@ -8,6 +8,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.text.TextUtils;
+import android.util.Log;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -23,9 +24,14 @@ import androidx.core.content.ContextCompat;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageException;
+import com.google.firebase.storage.StorageMetadata;
 import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 import com.squareup.picasso.Picasso;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -123,8 +129,8 @@ public class ProfileSetupActivity extends AppCompatActivity {
     }
 
     private void openImageChooser() {
-        Intent intent = new Intent(Intent.ACTION_PICK,
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        Intent intent = new Intent(Intent.ACTION_PICK);
+        intent.setType("image/*");
         startActivityForResult(intent, PICK_IMAGE_REQUEST);
     }
 
@@ -132,9 +138,15 @@ public class ProfileSetupActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        if (requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK && data != null) {
+        if (requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK && data != null && data.getData() != null) {
             imageUri = data.getData();
             try {
+                // 檢查 URI 是否可讀
+                InputStream inputStream = getContentResolver().openInputStream(imageUri);
+                if (inputStream != null) {
+                    inputStream.close();
+                }
+
                 Picasso.get()
                         .load(imageUri)
                         .placeholder(R.drawable.nigga)
@@ -142,8 +154,12 @@ public class ProfileSetupActivity extends AppCompatActivity {
                         .fit()
                         .centerCrop()
                         .into(profileImageView);
+            } catch (IOException e) {
+                Toast.makeText(this, "無法讀取圖片: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                Log.e("ImageLoad", "Error loading image", e);
             } catch (Exception e) {
                 Toast.makeText(this, "圖片加載失敗", Toast.LENGTH_SHORT).show();
+                Log.e("ImageLoad", "Error loading image", e);
             }
         }
     }
@@ -162,30 +178,50 @@ public class ProfileSetupActivity extends AppCompatActivity {
             return;
         }
 
+        // 再次確認用戶已登入
+        if (auth.getCurrentUser() == null) {
+            Toast.makeText(this, "用戶未登入，請重新登入", Toast.LENGTH_SHORT).show();
+            auth.signOut();
+            finish();
+            return;
+        }
+
         saveButton.setEnabled(false);
+        Toast.makeText(this, "正在上傳圖片...", Toast.LENGTH_SHORT).show();
 
         // 上傳圖片到 Firebase Storage
         String imageName = UUID.randomUUID().toString();
         StorageReference imageRef = storageRef.child(imageName);
 
-        imageRef.putFile(imageUri)
-                .continueWithTask(task -> {
-                    if (!task.isSuccessful()) {
-                        throw task.getException();
-                    }
-                    return imageRef.getDownloadUrl();
-                })
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        Uri downloadUri = task.getResult();
-                        saveUserData(name, bio, downloadUri.toString());
-                    } else {
-                        Toast.makeText(this, "圖片上傳失敗", Toast.LENGTH_SHORT).show();
-                        saveButton.setEnabled(true);
-                    }
-                });
-    }
+        // 添加元數據（可選）
+        StorageMetadata metadata = new StorageMetadata.Builder()
+                .setContentType("image/jpeg")
+                .build();
+12
+        UploadTask uploadTask = imageRef.putFile(imageUri, metadata);
 
+        uploadTask.addOnProgressListener(taskSnapshot -> {
+            double progress = (100.0 * taskSnapshot.getBytesTransferred()) / taskSnapshot.getTotalByteCount();
+            Log.d("Upload", "Upload is " + progress + "% done");
+        }).addOnFailureListener(e -> {
+            Toast.makeText(this, "上傳失敗: " + e.getMessage(), Toast.LENGTH_LONG).show();
+            saveButton.setEnabled(true);
+            Log.e("Upload", "Upload failed", e);
+
+            // 檢查是否是權限問題
+            if (e instanceof StorageException && ((StorageException) e).getErrorCode() == StorageException.ERROR_NOT_AUTHORIZED) {
+                Toast.makeText(this, "權限不足，請檢查Firebase Storage規則", Toast.LENGTH_LONG).show();
+            }
+        }).addOnSuccessListener(taskSnapshot -> {
+            imageRef.getDownloadUrl().addOnSuccessListener(uri -> {
+                saveUserData(name, bio, uri.toString());
+            }).addOnFailureListener(e -> {
+                Toast.makeText(this, "獲取下載鏈接失敗: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                saveButton.setEnabled(true);
+                Log.e("Upload", "Failed to get download URL", e);
+            });
+        });
+    }
     private void saveUserData(String name, String bio, String imageUrl) {
         String userId = auth.getCurrentUser().getUid();
 
@@ -203,8 +239,9 @@ public class ProfileSetupActivity extends AppCompatActivity {
                     finish();
                 })
                 .addOnFailureListener(e -> {
-                    Toast.makeText(this, "保存失敗: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "保存失敗: " + e.getMessage(), Toast.LENGTH_LONG).show();
                     saveButton.setEnabled(true);
+                    Log.e("Firestore", "Error saving user data", e);
                 });
     }
 }
