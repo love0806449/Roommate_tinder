@@ -22,6 +22,7 @@ import com.google.firebase.auth.FirebaseUser;
 
 
 public class loginActivity extends AppCompatActivity {
+    Button test;
     ImageView mImageView;
     Button  mButtonSignup, mButtonLogin;
     EditText mUsername,mPassword;
@@ -76,6 +77,14 @@ public class loginActivity extends AppCompatActivity {
                         Toast.makeText(loginActivity.this,"請確認帳號密碼是否正確！",Toast.LENGTH_LONG).show();
                     }
                 });
+            }
+        });
+        test = findViewById(R.id.button);
+        test.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent (loginActivity.this,chatActivity.class);
+                startActivity(intent);
             }
         });
     }
